@@ -1,0 +1,10 @@
+.env
+/vendor/
+.phpunit.result.cache
+/storage/logs/*
+!/storage/logs/.gitkeep
+/firebase/service-account.json
+/public/assets/js/firebase-config.js
+/public/firebase-messaging-sw.js
+.DS_Store
+Thumbs.db

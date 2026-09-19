@@ -32,12 +32,12 @@ final class TextLkSmsNotificationService implements SmsNotificationServiceInterf
     public function send(string $mobileNumber, string $message): array
     {
         if (!$this->apiToken || !$this->senderId) {
-            return ['ok' => false, 'error' => 'SMS gateway (text.lk) is not configured.'];
+            return ['ok' => false, 'error' => 'SMS gateway (text.lk) is not configured.', 'units' => null];
         }
 
         $recipient = self::toInternationalFormat($mobileNumber);
         if ($recipient === null) {
-            return ['ok' => false, 'error' => "Mobile number '{$mobileNumber}' doesn't look like a valid Sri Lankan number."];
+            return ['ok' => false, 'error' => "Mobile number '{$mobileNumber}' doesn't look like a valid Sri Lankan number.", 'units' => null];
         }
 
         $ch = curl_init(self::ENDPOINT);
@@ -54,8 +54,9 @@ final class TextLkSmsNotificationService implements SmsNotificationServiceInterf
                 'sender_id' => $this->senderId,
                 'type' => 'plain',
                 'message' => $message,
-            ]),
-            CURLOPT_TIMEOUT => 10,
+            ], JSON_UNESCAPED_UNICODE),
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 15,
         ]);
         $response = curl_exec($ch);
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -64,17 +65,24 @@ final class TextLkSmsNotificationService implements SmsNotificationServiceInterf
 
         if ($curlError) {
             Logger::error('text.lk send failed (network): ' . $curlError);
-            return ['ok' => false, 'error' => 'Network error contacting text.lk.'];
+            return ['ok' => false, 'error' => 'Network error contacting text.lk.', 'units' => null];
         }
 
-        if ($status >= 200 && $status < 300) {
-            return ['ok' => true, 'error' => null];
+        // text.lk answers {"status":"success", "data":{"sms_count":N,...}} on
+        // success and {"status":"error","message":"..."} otherwise (e.g. HTTP
+        // 403 "not enough balance"). Trust the body's status, not only HTTP.
+        $decoded = json_decode((string) $response, true);
+        $bodyStatus = is_array($decoded) ? ($decoded['status'] ?? null) : null;
+        $bodyOk = $bodyStatus === null || $bodyStatus === 'success';
+
+        if ($status >= 200 && $status < 300 && $bodyOk) {
+            $units = is_array($decoded) ? ($decoded['data']['sms_count'] ?? null) : null;
+            return ['ok' => true, 'error' => null, 'units' => $units !== null ? (int) $units : null];
         }
 
         Logger::error("text.lk send failed (HTTP {$status}): {$response}");
-        $decoded = json_decode((string) $response, true);
         $apiMessage = is_array($decoded) ? ($decoded['message'] ?? null) : null;
-        return ['ok' => false, 'error' => $apiMessage ?? ('text.lk rejected the message (HTTP ' . $status . ').')];
+        return ['ok' => false, 'error' => $apiMessage ?? ('text.lk rejected the message (HTTP ' . $status . ').'), 'units' => null];
     }
 
     /**

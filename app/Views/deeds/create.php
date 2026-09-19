@@ -15,18 +15,18 @@ use App\Core\View;
 <form method="post" action="<?= Response::url('deeds') ?>" class="card p-4" style="max-width:640px;">
   <?= Csrf::field() ?>
 
-  <div class="nd-section-title fs-6 mb-2">Buyer</div>
+  <div class="nd-section-title fs-6 mb-2"><i class="bi bi-person"></i>Buyer</div>
   <div class="mb-3"><label class="form-label small text-muted">Full name</label><input type="text" name="buyer_name" class="form-control" required></div>
   <div class="row g-2 mb-3">
     <div class="col-6"><label class="form-label small text-muted">NIC / ID no.</label><input type="text" name="buyer_nic" class="form-control"></div>
-    <div class="col-6"><label class="form-label small text-muted">Mobile no.</label><input type="text" name="buyer_phone" class="form-control"></div>
+    <div class="col-6"><label class="form-label small text-muted">Mobile no.</label><input type="text" name="buyer_phone" class="form-control" inputmode="tel" placeholder="07XXXXXXXX"></div>
   </div>
 
-  <div class="nd-section-title fs-6 mb-2 mt-3">Seller</div>
+  <div class="nd-section-title fs-6 mb-2 mt-3"><i class="bi bi-person-badge"></i>Seller</div>
   <div class="mb-3"><label class="form-label small text-muted">Full name</label><input type="text" name="seller_name" class="form-control" required></div>
   <div class="row g-2 mb-3">
     <div class="col-6"><label class="form-label small text-muted">NIC / ID no.</label><input type="text" name="seller_nic" class="form-control"></div>
-    <div class="col-6"><label class="form-label small text-muted">Mobile no.</label><input type="text" name="seller_phone" class="form-control"></div>
+    <div class="col-6"><label class="form-label small text-muted">Mobile no.</label><input type="text" name="seller_phone" class="form-control" inputmode="tel" placeholder="07XXXXXXXX"></div>
   </div>
 
   <hr class="my-3">

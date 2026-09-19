@@ -25,6 +25,14 @@ if ($password === '') {
     exit(1);
 }
 
+if (Env::get('APP_ENV') === 'production') {
+    $problem = \App\Services\PasswordPolicy::check($password, [$username, $email]);
+    if ($problem !== null) {
+        fwrite(STDERR, "SEED_ADMIN_PASSWORD is not acceptable for production: {$problem}\n");
+        exit(1);
+    }
+}
+
 $db = Database::connection();
 
 $check = $db->prepare('SELECT id FROM users WHERE username = :u OR email = :e');

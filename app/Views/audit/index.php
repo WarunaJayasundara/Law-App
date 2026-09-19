@@ -1,8 +1,13 @@
 <?php
 use App\Core\View;
 ?>
-<h1 class="font-head fs-2 mb-1">Audit log</h1>
-<p class="text-muted mb-3">Every sensitive action recorded across the system, most recent first (latest 200 shown).</p>
+<div class="nd-page-head">
+  <span class="nd-page-head-icon"><i class="bi bi-shield-check"></i></span>
+  <div class="nd-page-head-text">
+    <h1 class="font-head">Audit log</h1>
+    <p>Every sensitive action recorded across the system, most recent first (latest 200 shown).</p>
+  </div>
+</div>
 
 <div class="card p-3">
   <?php if (empty($logs)): ?>

@@ -76,6 +76,29 @@ final class Validator
         return $this;
     }
 
+    /**
+     * Letters, digits and the separators real deed numbers use ("/", "-", ".",
+     * space). The number is inserted into an SMS, so this also keeps links or
+     * other free text out of the message sent to buyers and sellers.
+     */
+    public function deedNumber(string $field, string $label): self
+    {
+        $v = $this->value($field);
+        if ($v !== '' && !preg_match('/^[A-Za-z0-9][A-Za-z0-9\/\-\. ]*$/', $v)) {
+            $this->errors[$field] = "{$label} may only contain letters, numbers, spaces and / - .";
+        }
+        return $this;
+    }
+
+    /** bcrypt only uses the first 72 bytes of a password, so longer input is rejected rather than silently truncated. */
+    public function maxBytes(string $field, int $max, string $label): self
+    {
+        if (strlen((string) ($this->data[$field] ?? '')) > $max) {
+            $this->errors[$field] = "{$label} must be {$max} bytes or fewer.";
+        }
+        return $this;
+    }
+
     public function decimal(string $field, string $label): self
     {
         $v = $this->value($field);

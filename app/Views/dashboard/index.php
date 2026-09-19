@@ -3,28 +3,31 @@ use App\Core\Response;
 use App\Core\View;
 use App\Models\Deed;
 ?>
-<div class="mb-4">
-  <h1 class="font-head fs-2 mb-1">Dashboard</h1>
-  <p class="text-muted">An overview of buyer and seller deeds tracked for registration.</p>
+<div class="nd-page-head">
+  <span class="nd-page-head-icon"><i class="bi bi-speedometer2"></i></span>
+  <div class="nd-page-head-text">
+    <h1 class="font-head">Dashboard</h1>
+    <p>An overview of buyer and seller deeds tracked for registration.</p>
+  </div>
 </div>
 
 <div class="row g-3 mb-4">
   <div class="col-md-3 col-6">
-    <div class="card nd-stat p-3"><i class="bi bi-journal-text nd-stat-icon"></i><div class="num"><?= (int) $counts['total'] ?></div><div class="label">Total deeds</div></div>
+    <div class="card nd-stat nd-stat--total p-3"><span class="nd-stat-icon-chip"><i class="bi bi-journal-text"></i></span><div class="num"><?= (int) $counts['total'] ?></div><div class="label">Total deeds</div></div>
   </div>
   <div class="col-md-3 col-6">
-    <div class="card nd-stat p-3"><i class="bi bi-inbox nd-stat-icon"></i><div class="num"><?= (int) $counts['submitted'] ?></div><div class="label">Submitted</div></div>
+    <div class="card nd-stat nd-stat--submitted p-3"><span class="nd-stat-icon-chip"><i class="bi bi-inbox"></i></span><div class="num"><?= (int) $counts['submitted'] ?></div><div class="label">Submitted</div></div>
   </div>
   <div class="col-md-3 col-6">
-    <div class="card nd-stat p-3"><i class="bi bi-clipboard-check nd-stat-icon"></i><div class="num"><?= (int) $counts['reviewed'] ?></div><div class="label">Reviewed</div></div>
+    <div class="card nd-stat nd-stat--reviewed p-3"><span class="nd-stat-icon-chip"><i class="bi bi-clipboard-check"></i></span><div class="num"><?= (int) $counts['reviewed'] ?></div><div class="label">Reviewed</div></div>
   </div>
   <div class="col-md-3 col-6">
-    <div class="card nd-stat p-3"><i class="bi bi-box-seam nd-stat-icon"></i><div class="num"><?= (int) $counts['received'] ?></div><div class="label">Received</div></div>
+    <div class="card nd-stat nd-stat--received p-3"><span class="nd-stat-icon-chip"><i class="bi bi-box-seam"></i></span><div class="num"><?= (int) $counts['received'] ?></div><div class="label">Received</div></div>
   </div>
 </div>
 
 <div class="card p-3">
-  <div class="nd-section-title fs-5 mb-3">Recent deeds</div>
+  <div class="nd-section-title fs-5 mb-3"><i class="bi bi-clock-history"></i>Recent deeds</div>
   <?php if (empty($recent)): ?>
     <div class="nd-empty">
       <i class="bi bi-journal-text nd-empty-icon"></i>

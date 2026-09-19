@@ -36,8 +36,13 @@ final class Env
         }
     }
 
+    /** Real environment variables override .env (hosts that inject config); .env is the fallback. */
     public static function get(string $key, mixed $default = null): mixed
     {
+        $fromEnvironment = getenv($key);
+        if ($fromEnvironment !== false) {
+            return $fromEnvironment;
+        }
         return self::$values[$key] ?? $default;
     }
 }

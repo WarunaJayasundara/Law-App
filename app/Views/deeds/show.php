@@ -18,11 +18,15 @@ $steps = [
 ];
 ?>
 <a href="<?= Response::url('deeds') ?>" class="back-link">&larr; Back to deed registry</a>
-<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-  <div>
-    <h1 class="font-head fs-2 mb-1">Deed no. <?= View::e($deed['deed_number']) ?></h1>
-    <p class="text-muted mb-0"><?= View::e($deed['category']) ?></p>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="d-flex align-items-center gap-3">
+    <span class="nd-page-head-icon"><i class="bi bi-file-earmark-richtext"></i></span>
+    <div>
+      <h1 class="font-head fs-2 mb-1">Deed no. <?= View::e($deed['deed_number']) ?></h1>
+      <p class="text-muted mb-0"><?= View::e($deed['category']) ?></p>
+    </div>
   </div>
+  <span class="badge badge-status status-<?= $deed['status'] ?>"><?= View::e(Deed::statusLabel($deed['status'])) ?></span>
 </div>
 
 <?php if (!empty($success)): ?><div class="alert alert-success py-2 small"><i class="bi bi-check-circle me-1"></i><?= View::e($success) ?></div><?php endif; ?>
@@ -39,8 +43,10 @@ $steps = [
     <?php endforeach; ?>
   </div>
 
+  <p class="text-muted small mt-3 mb-3"><i class="bi bi-chat-dots me-1"></i>When this deed is marked <strong>Received</strong>, the buyer and seller are sent the office's confirmation SMS automatically. Nothing else to click.</p>
+
   <?php if ($canUpdate): ?>
-    <div class="d-flex gap-2 mt-4 flex-wrap">
+    <div class="d-flex gap-2 mt-1 flex-wrap">
       <form method="post" action="<?= Response::url('deeds/' . $deed['id'] . '/review') ?>">
         <?= Csrf::field() ?>
         <button type="submit" class="btn btn-nd-primary" <?= $isReviewed ? 'disabled' : '' ?>>
@@ -56,21 +62,15 @@ $steps = [
       <?php if ($canNotify): ?>
         <form method="post" action="<?= Response::url('deeds/' . $deed['id'] . '/notify') ?>">
           <?= Csrf::field() ?>
-          <button type="submit" class="btn btn-outline-secondary" <?= (!$isReceived || !empty($registration['notification_sent'])) ? 'disabled' : '' ?>>
-            <i class="bi bi-bell me-1"></i><?= !empty($registration['notification_sent']) ? 'Notification sent' : 'Notify buyer and seller' ?>
+          <button type="submit" class="btn btn-outline-secondary" <?= $isReceived ? '' : 'disabled' ?> title="Send the confirmation SMS again, for example if the automatic one did not reach someone.">
+            <i class="bi bi-arrow-repeat me-1"></i>Resend SMS
           </button>
         </form>
       <?php endif; ?>
     </div>
-    <?php if (!$isReviewed): ?>
-      <p class="text-muted small mt-2 mb-0">Mark this deed reviewed once the Land Registry has acknowledged the submission.</p>
-    <?php elseif (!$isReceived): ?>
-      <p class="text-muted small mt-2 mb-0">Mark this deed received once the registered deed and folio have come back.</p>
-    <?php elseif (empty($registration['notification_sent'])): ?>
-      <p class="text-muted small mt-2 mb-0">Notify the buyer and seller once you're ready — this doesn't change the status above.</p>
-    <?php else: ?>
+    <?php if (!empty($registration['notification_sent'])): ?>
       <div class="mt-2 p-2 small nd-note">
-        Notified <?= View::e(date('d M Y, H:i', strtotime($registration['notification_sent_at']))) ?>. See the message above for whether the SMS and internal push actually delivered.
+        <i class="bi bi-chat-dots me-1"></i>Last SMS attempt: <?= View::e(date('d M Y, H:i', strtotime($registration['notification_sent_at']))) ?>. The result of each send is shown at the top of this page and recorded in the audit log.
       </div>
     <?php endif; ?>
   <?php endif; ?>
@@ -79,18 +79,23 @@ $steps = [
 <div class="row g-3">
   <div class="col-lg-6">
     <div class="card p-3">
-      <div class="nd-section-title fs-6 mb-3">Buyer, seller &amp; deed details</div>
+      <div class="nd-section-title fs-6 mb-3"><i class="bi bi-file-earmark-text"></i>Buyer, seller &amp; deed details</div>
       <form method="post" action="<?= Response::url('deeds/' . $deed['id'] . '/details') ?>">
         <?= Csrf::field() ?>
         <fieldset <?= $canUpdate ? '' : 'disabled' ?>>
           <div class="row g-2 mb-2">
             <div class="col-6"><label class="form-label small text-muted">Buyer name</label><input class="form-control form-control-sm" value="<?= View::e($deed['buyer_name']) ?>" disabled></div>
-            <div class="col-6"><label class="form-label small text-muted">Buyer NIC / ID no.</label><input class="form-control form-control-sm" value="<?= View::e($deed['buyer_nic']) ?>" disabled></div>
+            <div class="col-6"><label class="form-label small text-muted">Buyer NIC / ID no.</label><input class="form-control form-control-sm" value="<?= View::e(str_starts_with((string) $deed['buyer_nic'], 'nic_') ? '' : $deed['buyer_nic']) ?>" placeholder="Not provided" disabled></div>
           </div>
           <div class="row g-2 mb-2">
             <div class="col-6"><label class="form-label small text-muted">Seller name</label><input class="form-control form-control-sm" value="<?= View::e($deed['seller_name']) ?>" disabled></div>
-            <div class="col-6"><label class="form-label small text-muted">Seller NIC / ID no.</label><input class="form-control form-control-sm" value="<?= View::e($deed['seller_nic']) ?>" disabled></div>
+            <div class="col-6"><label class="form-label small text-muted">Seller NIC / ID no.</label><input class="form-control form-control-sm" value="<?= View::e(str_starts_with((string) $deed['seller_nic'], 'nic_') ? '' : $deed['seller_nic']) ?>" placeholder="Not provided" disabled></div>
           </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label small text-muted" for="buyer_phone">Buyer mobile no.</label><input type="text" id="buyer_phone" name="buyer_phone" class="form-control form-control-sm" inputmode="tel" placeholder="07XXXXXXXX" value="<?= View::e($deed['buyer_mobile'] ?? '') ?>"></div>
+            <div class="col-6"><label class="form-label small text-muted" for="seller_phone">Seller mobile no.</label><input type="text" id="seller_phone" name="seller_phone" class="form-control form-control-sm" inputmode="tel" placeholder="07XXXXXXXX" value="<?= View::e($deed['seller_mobile'] ?? '') ?>"></div>
+          </div>
+          <div class="form-text mb-2">The confirmation SMS is sent to these numbers when the deed is marked Received.</div>
           <hr>
           <div class="row g-2 mb-2">
             <div class="col-6"><label class="form-label small text-muted">Deed no.</label><input type="text" name="deed_no" class="form-control form-control-sm" value="<?= View::e($deed['deed_number']) ?>" required></div>
@@ -123,7 +128,7 @@ $steps = [
 
   <div class="col-lg-6">
     <div class="card p-3">
-      <div class="nd-section-title fs-6 mb-3">Registration details</div>
+      <div class="nd-section-title fs-6 mb-3"><i class="bi bi-building"></i>Registration details</div>
       <form method="post" action="<?= Response::url('deeds/' . $deed['id'] . '/registration') ?>">
         <?= Csrf::field() ?>
         <fieldset <?= $canUpdate ? '' : 'disabled' ?>>

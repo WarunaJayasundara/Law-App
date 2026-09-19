@@ -4,10 +4,12 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Controller;
+use App\Core\Env;
 use App\Core\Request;
 use App\Core\Session;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\PasswordPolicy;
 use App\Validators\Validator;
 
 final class UserController extends Controller
@@ -30,13 +32,21 @@ final class UserController extends Controller
 
         $v = new Validator($input);
         $v->required('name', 'Name')->maxLength('name', 120, 'Name')
-          ->required('email', 'Email')->email('email', 'Email')
+          ->required('email', 'Email')->email('email', 'Email')->maxLength('email', 150, 'Email')
           ->required('username', 'Username')->maxLength('username', 60, 'Username')
-          ->required('password', 'Password')->minLength('password', 10, 'Password')
+          ->required('password', 'Password')
           ->required('role_id', 'Role');
 
         if ($v->fails()) {
             $this->flashAndRedirect('error', implode(' ', $v->errors()), '/users');
+        }
+
+        $passwordProblem = PasswordPolicy::check((string) $input['password'], [trim($input['username']), trim($input['email'])], Env::get('SEED_ADMIN_PASSWORD'));
+        if ($passwordProblem !== null) {
+            $this->flashAndRedirect('error', $passwordProblem, '/users');
+        }
+        if (!User::roleExists((int) $input['role_id'])) {
+            $this->flashAndRedirect('error', 'Choose a valid role.', '/users');
         }
 
         if (User::findByLogin(trim($input['username'])) || User::findByLogin(trim($input['email']))) {
@@ -66,6 +76,9 @@ final class UserController extends Controller
         }
 
         $roleId = (int) Request::input('role_id');
+        if (!User::roleExists($roleId) || !User::findWithRole($id)) {
+            $this->flashAndRedirect('error', 'That user or role does not exist.', '/users');
+        }
         $status = in_array(Request::input('status'), ['active', 'disabled'], true) ? Request::input('status') : 'active';
 
         User::updateRoleAndStatus($id, $roleId, $status);

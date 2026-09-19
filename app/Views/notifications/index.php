@@ -3,15 +3,20 @@ use App\Core\Auth;
 use App\Core\Csrf;
 use App\Core\View;
 ?>
-<h1 class="font-head fs-2 mb-1">Notifications</h1>
-<p class="text-muted mb-3">Send push notifications via Firebase Cloud Messaging and review notification history.</p>
+<div class="nd-page-head">
+  <span class="nd-page-head-icon"><i class="bi bi-bell"></i></span>
+  <div class="nd-page-head-text">
+    <h1 class="font-head">Notifications</h1>
+    <p>Send push notifications via Firebase Cloud Messaging and review notification history.</p>
+  </div>
+</div>
 
 <?php if (!empty($success)): ?><div class="alert alert-success py-2 small"><?= View::e($success) ?></div><?php endif; ?>
 <?php if (!empty($error)): ?><div class="alert alert-danger py-2 small"><?= View::e($error) ?></div><?php endif; ?>
 
 <?php if (Auth::can('notifications.send')): ?>
-<div class="card p-3 mb-3">
-  <div class="nd-section-title fs-6 mb-3">Send a notification</div>
+<div class="card nd-filter-card p-3 mb-3">
+  <div class="nd-section-title fs-6 mb-3"><i class="bi bi-send"></i>Send a notification</div>
   <form method="post" action="<?= \App\Core\Response::url('notifications') ?>" style="max-width:560px;">
     <?= Csrf::field() ?>
     <div class="mb-2">
@@ -35,7 +40,7 @@ use App\Core\View;
 <?php endif; ?>
 
 <div class="card p-3">
-  <div class="nd-section-title fs-6 mb-3">History</div>
+  <div class="nd-section-title fs-6 mb-3"><i class="bi bi-clock-history"></i>History</div>
   <?php if (empty($history)): ?>
     <p class="text-muted small mb-0">No notifications sent yet.</p>
   <?php else: ?>

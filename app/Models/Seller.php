@@ -16,7 +16,7 @@ final class Seller
             $stmt->execute(['nic' => $nic]);
             $existing = $stmt->fetch();
             if ($existing) {
-                $update = $db->prepare('UPDATE sellers SET full_name = :name, mobile = :mobile, email = :email WHERE id = :id');
+                $update = $db->prepare('UPDATE sellers SET full_name = :name, mobile = COALESCE(NULLIF(:mobile, \'\'), mobile), email = :email WHERE id = :id');
                 $update->execute(['name' => $fullName, 'mobile' => $mobile, 'email' => $email ?: null, 'id' => $existing['id']]);
                 return (int) $existing['id'];
             }
@@ -30,6 +30,13 @@ final class Seller
             'email' => $email ?: null,
         ]);
         return (int) $db->lastInsertId();
+    }
+
+    /** Corrects the number the confirmation SMS is sent to. An empty value clears it. */
+    public static function updateMobile(int $id, string $mobile): void
+    {
+        $stmt = Database::connection()->prepare('UPDATE sellers SET mobile = :mobile WHERE id = :id');
+        $stmt->execute(['mobile' => $mobile !== '' ? $mobile : null, 'id' => $id]);
     }
 
     public static function find(int $id): ?array

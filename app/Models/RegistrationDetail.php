@@ -51,11 +51,24 @@ final class RegistrationDetail
         $stmt->execute(['user_id' => $userId, 'deed_id' => $deedId]);
     }
 
+    /** Records that a confirmation send was attempted (whether or not every channel delivered). */
     public static function markNotificationSent(int $deedId): void
     {
         $stmt = Database::connection()->prepare(
             'UPDATE registration_details SET notification_sent = 1, notification_sent_at = NOW() WHERE deed_id = :deed_id'
         );
         $stmt->execute(['deed_id' => $deedId]);
+    }
+
+    /** Seconds since the last send attempt, computed in SQL so PHP/MySQL timezones can't skew it. */
+    public static function secondsSinceNotification(int $deedId): ?int
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT TIMESTAMPDIFF(SECOND, notification_sent_at, NOW()) FROM registration_details
+             WHERE deed_id = :deed_id AND notification_sent_at IS NOT NULL'
+        );
+        $stmt->execute(['deed_id' => $deedId]);
+        $seconds = $stmt->fetchColumn();
+        return $seconds === false || $seconds === null ? null : (int) $seconds;
     }
 }

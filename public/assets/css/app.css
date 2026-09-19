@@ -40,11 +40,26 @@ h1, h2, h3, .card-title { font-family: var(--font-head); }
 .nd-sidebar {
   width: 248px;
   flex-shrink: 0;
+  position: relative;
   background: linear-gradient(180deg, var(--navy) 0%, #131e28 100%);
   color: #e9e4d4;
   padding: 26px 0 20px;
   box-shadow: 2px 0 12px rgba(0,0,0,0.12);
+  overflow: hidden;
 }
+/* A quiet echo of the login page's hero illustration (concentric rings +
+   a small compass-star), fixed low in the sidebar, so the brand identity
+   carries through past the login screen instead of stopping there. */
+.nd-sidebar::before {
+  content: '';
+  position: absolute; left: -40px; bottom: -60px; width: 240px; height: 240px;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Ccircle cx='120' cy='120' r='96' fill='none' stroke='%23c9a04e' stroke-opacity='.16' stroke-width='1.5'/%3E%3Ccircle cx='120' cy='120' r='68' fill='none' stroke='%23c9a04e' stroke-opacity='.22' stroke-width='1.5'/%3E%3Cpath d='M120 92 L128 114 L152 116 L132 132 L138 156 L120 142 L102 156 L108 132 L88 116 L112 114 Z' fill='%23c9a04e' fill-opacity='.16'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+@media (max-width: 900px) { .nd-sidebar::before { display: none; } }
+.nd-sidebar > .nd-brand, .nd-sidebar > .nd-nav, .nd-sidebar > .nd-sidebar-foot { position: relative; z-index: 1; }
 
 .nd-brand {
   display: flex;
@@ -69,9 +84,10 @@ h1, h2, h3, .card-title { font-family: var(--font-head); }
 
 .nd-nav { padding: 0 12px; gap: 2px; }
 .nd-nav .nav-link {
+  position: relative;
   color: #c7c1ac;
   border-radius: 7px;
-  padding: 10px 13px;
+  padding: 10px 13px 10px 16px;
   font-size: 13.5px;
   font-weight: 500;
   display: flex; align-items: center; gap: 11px;
@@ -79,11 +95,16 @@ h1, h2, h3, .card-title { font-family: var(--font-head); }
 }
 .nd-nav .nav-link i { font-size: 15px; width: 18px; text-align: center; color: #8b96a3; transition: color .15s ease; }
 .nd-nav .nav-link:hover { background: rgba(233,228,212,.07); color: #fff; }
-.nd-nav .nav-link.active { background: var(--navy-3); color: #fff; box-shadow: var(--shadow-sm); }
+.nd-nav .nav-link.active { background: rgba(201,160,78,.1); color: #fff; }
 .nd-nav .nav-link.active i { color: var(--gold); }
+.nd-nav .nav-link.active::before {
+  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--gold);
+}
 
 .nd-sidebar-foot { margin-top: auto; padding: 18px 20px 0; border-top: 1px solid rgba(233,228,212,.1); }
-.nd-sidebar-foot .who { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #d9d4c2; margin-bottom: 12px; }
+.nd-sidebar-foot .who { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #d9d4c2; margin-bottom: 12px; text-decoration: none; border-radius: 8px; padding: 4px; margin-left: -4px; transition: background .15s ease; }
+.nd-sidebar-foot a.who:hover { background: rgba(233,228,212,.08); color: #fff; }
 .nd-sidebar-foot .who small { color: #8b96a3; font-size: 10.5px; }
 .nd-avatar {
   width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
@@ -97,7 +118,22 @@ h1, h2, h3, .card-title { font-family: var(--font-head); }
 }
 .nd-logout-btn:hover { color: #e8b09c; text-decoration: underline; }
 
-.nd-main { flex: 1; padding: 36px 44px; max-width: 1200px; min-width: 0; }
+.nd-main {
+  flex: 1; padding: 36px 44px; max-width: 1200px; min-width: 0;
+  position: relative;
+}
+/* A quiet, professional background texture instead of a flat fill —
+   two very low-opacity radial blobs (navy + gold) fixed behind the
+   scrolling content, never competing with foreground text/cards. */
+.nd-main::before {
+  content: '';
+  position: fixed; inset: 0; left: 248px; z-index: -1;
+  background:
+    radial-gradient(560px 420px at 92% -8%, rgba(47,74,97,.07), transparent 60%),
+    radial-gradient(480px 380px at -6% 100%, rgba(201,160,78,.08), transparent 60%);
+  pointer-events: none;
+}
+@media (max-width: 900px) { .nd-main::before { left: 0; position: absolute; } }
 
 .nd-nav-toggle { display: none; }
 
@@ -123,8 +159,8 @@ h1, h2, h3, .card-title { font-family: var(--font-head); }
     padding-left: 14px; padding-right: 14px;
     transition: max-height .22s ease;
   }
-  .nd-sidebar.is-open .nd-nav { max-height: 340px; padding-top: 10px; padding-bottom: 6px; }
-  .nd-sidebar.is-open .nd-sidebar-foot { max-height: 140px; border-top: 1px solid rgba(233,228,212,.1); padding-top: 14px; padding-bottom: 16px; }
+  .nd-sidebar.is-open .nd-nav { max-height: 420px; padding-top: 10px; padding-bottom: 6px; }
+  .nd-sidebar.is-open .nd-sidebar-foot { max-height: 180px; border-top: 1px solid rgba(233,228,212,.1); padding-top: 14px; padding-bottom: 16px; }
 
   .nd-nav .nav-link { padding: 11px 12px; }
   .nd-main { padding: 20px 16px; }
@@ -142,17 +178,67 @@ h1, h2, h3, .card-title { font-family: var(--font-head); }
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
+  transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
 }
 .card .card-title { color: var(--navy); }
+
+.card.nd-hoverable:hover { box-shadow: var(--shadow-md); border-color: var(--line-strong); transform: translateY(-2px); }
 
 .back-link { font-size: 13px; color: var(--navy-3); text-decoration: none; display: inline-block; margin-bottom: 12px; font-weight: 500; }
 .back-link:hover { text-decoration: underline; }
 
+/* ---------- page head ---------- */
+/* A distinct, consistent header used at the top of every main page (dashboard,
+   deed registry, users, notifications, audit log) so each section reads with
+   a clear identity instead of a plain stacked h1/p. */
+.nd-page-head {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-bottom: 20px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.nd-page-head-icon {
+  width: 46px; height: 46px; flex-shrink: 0; border-radius: 12px;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-3) 100%);
+  color: var(--gold); font-size: 19px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(22,35,47,.18);
+}
+.nd-page-head-text { min-width: 0; }
+.nd-page-head-text h1 { font-size: 22px; line-height: 1.2; margin: 0 0 3px; }
+.nd-page-head-text p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.nd-page-head-action { margin-left: auto; }
+@media (max-width: 560px) {
+  .nd-page-head-icon { width: 40px; height: 40px; font-size: 17px; border-radius: 10px; }
+  .nd-page-head-text h1 { font-size: 19px; }
+  .nd-page-head-action { margin-left: 0; width: 100%; }
+  .nd-page-head-action .btn { width: 100%; }
+}
+
+/* Tinted variant for filter/search forms, to visually separate "controls"
+   from the data card sitting right beneath them. */
+.nd-filter-card {
+  background: linear-gradient(180deg, var(--brass-light) 0%, var(--paper-raised) 130%);
+  border-left: 3px solid var(--gold);
+}
+
 /* ---------- stats ---------- */
-.nd-stat { position: relative; padding-top: 18px !important; }
-.nd-stat-icon { position: absolute; top: 16px; right: 16px; font-size: 20px; color: var(--gold); opacity: .6; }
-.nd-stat .num { font-family: var(--font-head); font-size: 32px; line-height: 1; color: var(--navy); }
+.nd-stat { position: relative; padding: 20px 18px 18px !important; border-top: 3px solid var(--line-strong); overflow: hidden; }
+.nd-stat:hover { box-shadow: var(--shadow-md); border-color: var(--line-strong); transform: translateY(-2px); }
+.nd-stat-icon-chip {
+  width: 34px; height: 34px; border-radius: 9px; margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+  background: var(--brass-light); color: var(--brass);
+}
+.nd-stat .num { font-family: var(--font-head); font-size: 30px; line-height: 1; color: var(--navy); }
 .nd-stat .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-top: 8px; font-weight: 600; }
+.nd-stat--total { border-top-color: var(--navy-3); }
+.nd-stat--total .nd-stat-icon-chip { background: rgba(47,74,97,.12); color: var(--navy-3); }
+.nd-stat--submitted { border-top-color: var(--brass); }
+.nd-stat--submitted .nd-stat-icon-chip { background: var(--brass-light); color: var(--brass); }
+.nd-stat--reviewed { border-top-color: #6d93b0; }
+.nd-stat--reviewed .nd-stat-icon-chip { background: #e2ecf3; color: var(--navy-3); }
+.nd-stat--received { border-top-color: var(--success); }
+.nd-stat--received .nd-stat-icon-chip { background: #e0ede2; color: var(--success); }
 
 /* ---------- tables ---------- */
 table.nd-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--line-strong); padding-bottom: 10px; }
@@ -186,6 +272,47 @@ tr.nd-clickable:hover td { background: rgba(201,160,78,.07); }
   table.nd-table.nd-table-stack td:empty::before { content: none; }
 }
 
+/* ---------- search suggest ---------- */
+.nd-search-wrap { position: relative; }
+.nd-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13.5px; pointer-events: none; }
+.nd-search-wrap input.form-control { padding-left: 34px; }
+.nd-search-suggest {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40;
+  background: var(--paper-raised); border: 1px solid var(--line-strong); border-radius: 10px;
+  box-shadow: var(--shadow-md); overflow: hidden; max-height: 320px; overflow-y: auto;
+}
+.nd-suggest-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer;
+  border-bottom: 1px solid var(--line); transition: background .1s ease;
+}
+.nd-suggest-item:last-child { border-bottom: none; }
+.nd-suggest-item:hover, .nd-suggest-item.is-active { background: rgba(201,160,78,.1); }
+.nd-suggest-main { font-weight: 600; color: var(--navy); font-size: 13px; flex-shrink: 0; }
+.nd-suggest-sub { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nd-suggest-empty { padding: 14px 12px; color: var(--muted); font-size: 12.5px; text-align: center; }
+
+/* ---------- SMS template settings ---------- */
+.nd-sms-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 6px; font-size: 12.5px; color: var(--muted); }
+.nd-sms-meta strong { color: var(--navy); }
+.nd-sms-preview {
+  white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.55; color: var(--ink);
+  background: #eef2f5; border: 1px solid var(--line); border-radius: 12px 12px 12px 3px; padding: 12px 14px;
+}
+
+/* ---------- card watermark ---------- */
+/* Fills otherwise-dead white space on cards that can run long and empty
+   (search results, tables) with a large, extremely faint brand icon in the
+   corner — decoration, not data, so it's always behind real content. */
+.nd-card-watermark { position: relative; overflow: hidden; }
+.nd-card-watermark::after {
+  content: '\F444'; /* bootstrap-icons bi-journal-text glyph */
+  font-family: 'bootstrap-icons' !important;
+  font-weight: normal; font-style: normal;
+  position: absolute; right: -18px; bottom: -28px; font-size: 160px;
+  color: var(--navy); opacity: .028; pointer-events: none; z-index: 0; line-height: 1;
+}
+.nd-card-watermark > * { position: relative; z-index: 1; }
+
 /* ---------- badges ---------- */
 .badge-status { border: 1px solid var(--line-strong); color: var(--navy); background: var(--brass-light); font-weight: 600; font-size: 11px; letter-spacing: .2px; padding: 5px 11px; border-radius: 20px; }
 .badge-status.status-Received { background: #e0ede2; color: var(--success); border-color: #b7d3bc; }
@@ -193,13 +320,42 @@ tr.nd-clickable:hover td { background: rgba(201,160,78,.07); }
 .badge-status.status-Submitted { background: var(--brass-light); color: var(--brass); border-color: var(--line-strong); }
 
 /* ---------- buttons ---------- */
-.btn { border-radius: 7px; font-weight: 500; transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .05s ease; }
+.btn { border-radius: 8px; font-weight: 600; letter-spacing: .1px; transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .12s ease, color .15s ease; }
 .btn:active { transform: translateY(1px); }
-.btn-nd-primary { background: var(--navy); border-color: var(--navy); color: #fff; }
-.btn-nd-primary:hover { background: var(--navy-3); border-color: var(--navy-3); color: #fff; }
-.btn-nd-primary:disabled { background: #a9b4bd; border-color: #a9b4bd; color: #fff; opacity: .7; }
-.btn-outline-secondary { border-color: var(--line-strong); color: var(--navy); }
-.btn-outline-secondary:hover { background: var(--navy); border-color: var(--navy); }
+
+.btn-nd-primary {
+  background: linear-gradient(135deg, var(--navy-3) 0%, var(--navy) 70%);
+  border-color: var(--navy);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(22,35,47,.15), 0 3px 10px rgba(22,35,47,.12);
+}
+.btn-nd-primary:hover {
+  background: linear-gradient(135deg, #3c5c78 0%, var(--navy-3) 70%);
+  border-color: var(--navy-3);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(22,35,47,.18), 0 8px 20px rgba(22,35,47,.2), 0 0 0 1px rgba(201,160,78,.25);
+  transform: translateY(-1px);
+}
+.btn-nd-primary:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(22,35,47,.15); }
+.btn-nd-primary:disabled { background: #a9b4bd; border-color: #a9b4bd; color: #fff; opacity: .7; box-shadow: none; transform: none; }
+
+.btn-outline-secondary {
+  border-color: var(--line-strong); color: var(--navy); background: var(--paper-raised);
+}
+.btn-outline-secondary:hover {
+  background: var(--navy); border-color: var(--navy); color: #fff;
+  box-shadow: 0 4px 14px rgba(22,35,47,.16); transform: translateY(-1px);
+}
+.btn-outline-secondary:active { transform: translateY(0); }
+
+.btn-outline-danger { transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .12s ease, color .15s ease; }
+.btn-outline-danger:hover { box-shadow: 0 4px 14px rgba(138,51,36,.18); transform: translateY(-1px); }
+
+/* Icons inside buttons nudge slightly on hover — a small "alive" cue rather
+   than a static label, kept subtle so it reads as polish, not a toy. */
+.btn i.bi { transition: transform .18s ease; display: inline-block; }
+.btn:hover i.bi { transform: translateX(1px); }
+.btn:hover i.bi-arrow-repeat { transform: rotate(50deg); }
 
 .btn.is-submitting { cursor: progress; opacity: .8; pointer-events: none; position: relative; color: transparent !important; }
 .btn.is-submitting::after {
@@ -235,7 +391,8 @@ tr.nd-clickable:hover td { background: rgba(201,160,78,.07); }
 .nd-empty { padding: 52px 20px; text-align: center; color: var(--muted); }
 .nd-empty-icon { display: block; font-size: 30px; color: var(--line-strong); margin-bottom: 14px; }
 .nd-empty p { margin-bottom: 14px; }
-.nd-section-title { font-family: var(--font-head); color: var(--navy); font-size: 16px; }
+.nd-section-title { font-family: var(--font-head); color: var(--navy); font-size: 16px; display: flex; align-items: center; gap: 9px; }
+.nd-section-title i { color: var(--gold); font-size: 15px; }
 
 .alert { border-radius: 8px; border: none; }
 .alert-success { background: #e0ede2; color: var(--success); }

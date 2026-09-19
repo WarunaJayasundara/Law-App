@@ -4,13 +4,16 @@ namespace App\Services\Notifications;
 
 /**
  * Firebase Cloud Messaging is a push-notification system, not an SMS
- * gateway — it cannot send SMS. This interface exists so a real SMS
- * provider (e.g. a local Sri Lankan SMS gateway) can be plugged in later
- * without touching call sites, matching the project's swappable-service
- * pattern. No implementation is wired up (needs a provider + credentials).
+ * gateway, so real SMS goes through a separate provider. The only
+ * implementation is TextLkSmsNotificationService (text.lk); the interface
+ * keeps call sites independent of the provider.
  */
 interface SmsNotificationServiceInterface
 {
-    /** @return array{ok:bool, error:?string} */
+    /**
+     * `units` is the number of SMS parts the provider billed, when known.
+     *
+     * @return array{ok:bool, error:?string, units?:?int}
+     */
     public function send(string $mobileNumber, string $message): array;
 }

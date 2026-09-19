@@ -66,6 +66,19 @@ final class User
         $stmt->execute(['role_id' => $roleId, 'status' => $status, 'id' => $id]);
     }
 
+    public static function updatePassword(int $id, string $newPassword): void
+    {
+        $stmt = Database::connection()->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+        $stmt->execute(['hash' => password_hash($newPassword, PASSWORD_DEFAULT), 'id' => $id]);
+    }
+
+    public static function roleExists(int $roleId): bool
+    {
+        $stmt = Database::connection()->prepare('SELECT 1 FROM roles WHERE id = :id');
+        $stmt->execute(['id' => $roleId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public static function recordLoginSuccess(int $id): void
     {
         $stmt = Database::connection()->prepare(

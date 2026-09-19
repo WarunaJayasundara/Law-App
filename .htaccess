@@ -1,0 +1,26 @@
+# Apache entry rules for hosts where the web root is this project folder
+# (typical of shared/free PHP hosting, where you cannot point the domain at
+# public/). If your host lets you set the document root to public/, do that
+# instead and this file is not needed.
+#
+# 1. Blocks everything that must never be downloaded: .env, the Firebase
+#    private key, source code, SQL dumps, logs, dependencies.
+# 2. Serves everything else from public/.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# Application code, secrets and tooling directories: never web-accessible.
+RewriteRule ^(app|config|database|docs|firebase|storage|tests|vendor|\.git)(/|$) - [F,L,NC]
+
+# Dotfiles (.env, .git*, .htaccess, ...) and non-public file types anywhere.
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+RewriteRule \.(env|sql|md|log|lock|xml|dist|bak|ini|cache|phpt)$ - [F,L,NC]
+RewriteRule ^(composer\.json|composer\.lock|phpunit\.xml|bootstrap\.php)$ - [F,L,NC]
+
+# Everything else is served from public/.
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

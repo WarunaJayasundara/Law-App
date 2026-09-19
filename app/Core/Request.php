@@ -56,8 +56,34 @@ final class Request
         return $_POST['_csrf'] ?? null;
     }
 
+    /**
+     * Only when TRUST_PROXY=true (the app sits behind a reverse proxy or
+     * host-provided load balancer that sets these headers) are the forwarded
+     * headers believed. The rightmost X-Forwarded-For entry is the address
+     * the trusted proxy itself saw, so it cannot be forged by the client.
+     */
+    public static function trustsProxy(): bool
+    {
+        return Env::get('TRUST_PROXY', 'false') === 'true';
+    }
+
+    public static function isHttps(): bool
+    {
+        if (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+            return true;
+        }
+        return self::trustsProxy() && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    }
+
     public static function ip(): string
     {
+        if (self::trustsProxy() && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $hops = array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']));
+            $candidate = end($hops);
+            if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                return $candidate;
+            }
+        }
         return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     }
 

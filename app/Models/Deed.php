@@ -103,6 +103,39 @@ final class Deed
         ];
     }
 
+    /**
+     * Lightweight live-search-as-you-type source for the registry's search
+     * box — same fields as search()'s q filter (deed no, buyer/seller name
+     * and NIC) but a small, fast result set meant for a dropdown, not the
+     * full paginated table.
+     */
+    public static function suggest(string $q, int $limit = 8): array
+    {
+        $q = trim($q);
+        if ($q === '') {
+            return [];
+        }
+        $stmt = Database::connection()->prepare(
+            "SELECT d.id, d.deed_number, d.status, b.full_name AS buyer_name, s.full_name AS seller_name
+             FROM deeds d
+             JOIN buyers b ON b.id = d.buyer_id
+             JOIN sellers s ON s.id = d.seller_id
+             WHERE d.is_archived = 0
+               AND (d.deed_number LIKE :q1 OR b.nic LIKE :q2 OR s.nic LIKE :q3 OR b.full_name LIKE :q4 OR s.full_name LIKE :q5)
+             ORDER BY d.updated_at DESC
+             LIMIT :limit"
+        );
+        $needle = "%{$q}%";
+        $stmt->bindValue('q1', $needle);
+        $stmt->bindValue('q2', $needle);
+        $stmt->bindValue('q3', $needle);
+        $stmt->bindValue('q4', $needle);
+        $stmt->bindValue('q5', $needle);
+        $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     public static function find(int $id): ?array
     {
         $stmt = Database::connection()->prepare(

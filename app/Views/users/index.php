@@ -4,20 +4,25 @@ use App\Core\Csrf;
 use App\Core\Response;
 use App\Core\View;
 ?>
-<h1 class="font-head fs-2 mb-1">Users</h1>
-<p class="text-muted mb-3">Manage staff and admin accounts and their roles.</p>
+<div class="nd-page-head">
+  <span class="nd-page-head-icon"><i class="bi bi-people"></i></span>
+  <div class="nd-page-head-text">
+    <h1 class="font-head">Users</h1>
+    <p>Manage staff and admin accounts and their roles.</p>
+  </div>
+</div>
 
 <?php if (!empty($success)): ?><div class="alert alert-success py-2 small"><?= View::e($success) ?></div><?php endif; ?>
 <?php if (!empty($error)): ?><div class="alert alert-danger py-2 small"><?= View::e($error) ?></div><?php endif; ?>
 
-<div class="card p-3 mb-3">
-  <div class="nd-section-title fs-6 mb-3">Add user</div>
+<div class="card nd-filter-card p-3 mb-3">
+  <div class="nd-section-title fs-6 mb-3"><i class="bi bi-person-plus"></i>Add user</div>
   <form method="post" action="<?= Response::url('users') ?>" class="row g-2 align-items-end">
     <?= Csrf::field() ?>
     <div class="col-md-2"><label class="form-label small text-muted">Name</label><input type="text" name="name" class="form-control form-control-sm" required></div>
     <div class="col-md-2"><label class="form-label small text-muted">Email</label><input type="email" name="email" class="form-control form-control-sm" required></div>
     <div class="col-md-2"><label class="form-label small text-muted">Username</label><input type="text" name="username" class="form-control form-control-sm" required></div>
-    <div class="col-md-2"><label class="form-label small text-muted">Password</label><input type="password" name="password" class="form-control form-control-sm" minlength="10" required></div>
+    <div class="col-md-2"><label class="form-label small text-muted">Password</label><input type="password" name="password" class="form-control form-control-sm" minlength="10" maxlength="72" autocomplete="new-password" required></div>
     <div class="col-md-2">
       <label class="form-label small text-muted">Role</label>
       <select name="role_id" class="form-select form-select-sm">

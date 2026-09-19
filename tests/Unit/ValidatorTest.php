@@ -34,6 +34,27 @@ final class ValidatorTest extends TestCase
         $this->assertTrue($v->fails());
     }
 
+    public function testDeedNumberAcceptsRealFormatsAndRejectsFreeText(): void
+    {
+        foreach (['14367', 'A 123/2024', 'D-2026-001', '12.5'] as $ok) {
+            $v = new Validator(['n' => $ok]);
+            $v->deedNumber('n', 'Deed no.');
+            $this->assertFalse($v->fails(), $ok);
+        }
+        foreach (['see http://evil.example', 'x<script>', "line1\nline2", '-leading', '<b>'] as $bad) {
+            $v = new Validator(['n' => $bad]);
+            $v->deedNumber('n', 'Deed no.');
+            $this->assertTrue($v->fails(), $bad);
+        }
+    }
+
+    public function testMaxBytesCountsBytesNotCharacters(): void
+    {
+        $v = new Validator(['p' => str_repeat('අ', 25)]); // 25 characters, 75 bytes
+        $v->maxBytes('p', 72, 'Password');
+        $this->assertTrue($v->fails());
+    }
+
     public function testDecimalRejectsNonNumeric(): void
     {
         $v = new Validator(['amount' => 'abc']);

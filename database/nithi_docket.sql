@@ -189,6 +189,18 @@ CREATE TABLE `audit_logs` (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- Settings (admin-editable, e.g. the "deed received" SMS wording)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE `settings` (
+  `setting_key` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `setting_value` TEXT NOT NULL,
+  `updated_by` INT UNSIGNED NULL,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- Seed data (roles/permissions only — no customer data)
 -- ---------------------------------------------------------------------
 
@@ -204,7 +216,8 @@ INSERT INTO `permissions` (`name`, `description`) VALUES
   ('notifications.send', 'Send push notifications'),
   ('notifications.view', 'View notification history'),
   ('users.manage', 'Manage users and roles'),
-  ('audit.view', 'View audit logs');
+  ('audit.view', 'View audit logs'),
+  ('settings.manage', 'Edit system settings such as the SMS message template');
 
 -- admin: every permission
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)

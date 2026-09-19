@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Csrf;
+use App\Core\Logger;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -13,14 +14,18 @@ use App\Models\Deed;
 use App\Models\Notification;
 use App\Models\RegistrationDetail;
 use App\Models\Seller;
+use App\Models\Setting;
 use App\Services\AuditLogger;
 use App\Services\DeedStatusService;
+use App\Services\SmsTemplate;
 use App\Services\Notifications\FirebaseNotificationService;
 use App\Services\Notifications\TextLkSmsNotificationService;
 use App\Validators\Validator;
 
 final class DeedController extends Controller
 {
+    private const RESEND_COOLDOWN_SECONDS = 60;
+
     public function index(): void
     {
         $this->requirePermission('deeds.view');
@@ -46,6 +51,15 @@ final class DeedController extends Controller
         ]);
     }
 
+    /** Live-search-as-you-type source for the registry's search box (JSON). */
+    public function suggest(): void
+    {
+        $this->requirePermission('deeds.view');
+        $q = Request::trimmed('q');
+        $rows = mb_strlen($q) >= 1 ? Deed::suggest($q) : [];
+        Response::json(['results' => $rows]);
+    }
+
     public function showCreateForm(): void
     {
         $this->requirePermission('deeds.create');
@@ -68,7 +82,7 @@ final class DeedController extends Controller
           ->required('seller_name', 'Seller full name')->maxLength('seller_name', 150, 'Seller full name')
           ->nic('seller_nic', 'Seller NIC / ID no.')
           ->mobile('seller_phone', 'Seller mobile no.')
-          ->required('deed_no', 'Deed no.')->maxLength('deed_no', 60, 'Deed no.')
+          ->required('deed_no', 'Deed no.')->maxLength('deed_no', 60, 'Deed no.')->deedNumber('deed_no', 'Deed no.')
           ->required('deed_category', 'Deed category')->in('deed_category', Deed::CATEGORIES, 'Deed category')
           ->maxLength('folio_number', 60, 'Folio no.')
           ->decimal('amount', 'Amount')
@@ -132,9 +146,11 @@ final class DeedController extends Controller
         $input = Request::all();
 
         $v = new Validator($input);
-        $v->required('deed_no', 'Deed no.')->maxLength('deed_no', 60, 'Deed no.')
+        $v->required('deed_no', 'Deed no.')->maxLength('deed_no', 60, 'Deed no.')->deedNumber('deed_no', 'Deed no.')
           ->required('deed_category', 'Deed category')->in('deed_category', Deed::CATEGORIES, 'Deed category')
           ->maxLength('folio_number', 60, 'Folio no.')
+          ->mobile('buyer_phone', 'Buyer mobile no.')
+          ->mobile('seller_phone', 'Seller mobile no.')
           ->decimal('amount', 'Amount')
           ->decimal('value', 'Value');
 
@@ -142,16 +158,32 @@ final class DeedController extends Controller
             $this->flashAndRedirect('error', implode(' ', $v->errors()), '/deeds/' . $id);
         }
 
-        Deed::updateDetails($id, [
+        $clash = Deed::findByNumber(trim($input['deed_no']));
+        if ($clash && (int) $clash['id'] !== $id) {
+            $this->flashAndRedirect('error', 'Another deed already uses that deed number.', '/deeds/' . $id);
+        }
+
+        $changes = [
             'deed_number' => trim($input['deed_no']),
             'category' => $input['deed_category'],
             'folio_number' => trim($input['folio_number'] ?? ''),
             'amount' => trim($input['amount'] ?? ''),
             'value' => trim($input['value'] ?? ''),
             'other_document_numbers' => trim($input['other_document_numbers'] ?? ''),
-        ], Auth::id());
+        ];
+        Deed::updateDetails($id, $changes, Auth::id());
 
-        AuditLogger::log('deed.update', 'deed', $id, $deed, $input);
+        // The confirmation SMS goes to these numbers, so they must be correctable after entry.
+        if (array_key_exists('buyer_phone', $input)) {
+            $changes['buyer_mobile'] = trim($input['buyer_phone']);
+            Buyer::updateMobile((int) $deed['buyer_id'], $changes['buyer_mobile']);
+        }
+        if (array_key_exists('seller_phone', $input)) {
+            $changes['seller_mobile'] = trim($input['seller_phone']);
+            Seller::updateMobile((int) $deed['seller_id'], $changes['seller_mobile']);
+        }
+
+        AuditLogger::log('deed.update', 'deed', $id, $deed, $changes);
 
         $this->flashAndRedirect('success', 'Deed details saved.', '/deeds/' . $id);
     }
@@ -227,20 +259,91 @@ final class DeedController extends Controller
         $status = DeedStatusService::recalculateAndSave($id, RegistrationDetail::find($id));
 
         AuditLogger::log('deed.marked_received', 'deed', $id, null, ['status' => $status]);
-        $this->flashAndRedirect('success', 'Marked received. Status: ' . Deed::statusLabel($status), '/deeds/' . $id);
+        $notify = $this->notifyReceived(Deed::find($id));
+        $this->flashAndRedirect($notify['smsOk'] ? 'success' : 'error', 'Marked received. Status: ' . Deed::statusLabel($status) . '. ' . $notify['message'], '/deeds/' . $id);
     }
 
     /**
-     * Replaces the prototype's fake "Send SMS" button. Available once the
-     * deed has been marked Received (its registration progress is done).
-     * Attempts real delivery on two independent channels and reports each
-     * honestly:
-     *   - real SMS to the buyer/seller's mobile numbers via text.lk (see
-     *     /firebase/SETUP.md's SMS note and TextLkSmsNotificationService)
-     *   - an internal FCM push to the 'deed-updates' topic, for staff/admin
-     *     awareness (works once Firebase is configured)
-     * This is independent of deeds.status (only Submitted/Reviewed/Received
-     * exist) — it's a courtesy action, not a 4th workflow stage.
+     * Runs once, automatically, when a deed is marked Received: the buyer and
+     * seller each get the office's confirmation SMS (wording is the
+     * admin-editable template; only the deed number changes per deed), and
+     * staff get an internal push. Each channel is reported honestly.
+     *
+     * Never throws. A delivery failure is reported in the flash message and
+     * audit log but must not undo the status change that already happened.
+     */
+    private function notifyReceived(?array $deed): array
+    {
+        if (!$deed) {
+            return ['smsOk' => true, 'message' => ''];
+        }
+        $id = (int) $deed['id'];
+
+        try {
+            $message = SmsTemplate::render(Setting::receivedTemplate(), (string) $deed['deed_number']);
+
+            $sms = new TextLkSmsNotificationService();
+            $results = [];
+            $alreadySentTo = [];
+            foreach (['buyer' => $deed['buyer_mobile'] ?? null, 'seller' => $deed['seller_mobile'] ?? null] as $party => $mobile) {
+                $number = $mobile ? TextLkSmsNotificationService::toInternationalFormat($mobile) : null;
+                if (!$mobile) {
+                    $results[$party] = ['ok' => false, 'error' => 'No mobile number on file.'];
+                } elseif ($number !== null && isset($alreadySentTo[$number])) {
+                    // Same person listed as both parties (or a shared phone): one SMS is enough.
+                    $results[$party] = ['ok' => $alreadySentTo[$number]['ok'], 'error' => $alreadySentTo[$number]['error'], 'duplicate' => true];
+                } else {
+                    $results[$party] = $sms->send($mobile, $message);
+                    if ($number !== null) {
+                        $alreadySentTo[$number] = $results[$party];
+                    }
+                }
+            }
+            AuditLogger::log('deed.sms_attempted', 'deed', $id, null, $results);
+
+            $pushText = "Deed {$deed['deed_number']} has been received and registered.";
+            $push = new FirebaseNotificationService();
+            $pushResult = $push->sendToTopic('deed-updates', 'Deed received', $pushText, ['deed_id' => (string) $id]);
+            $notificationId = Notification::create([
+                'title' => 'Deed received',
+                'message' => $pushText,
+                'target_type' => 'topic',
+                'target_value' => 'deed-updates',
+                'related_deed_id' => $id,
+                'sent_by' => Auth::id(),
+            ]);
+            Notification::markResult($notificationId, $pushResult['ok'] ? 'sent' : 'failed', $pushResult['error'], $pushResult['recipientCount']);
+
+            RegistrationDetail::markNotificationSent($id);
+            AuditLogger::log('deed.notification_sent', 'deed', $id, null, ['push' => $pushResult, 'sms' => $results]);
+        } catch (\Throwable $e) {
+            Logger::error('Received-notification failed for deed ' . $id . ': ' . $e->getMessage());
+            return ['smsOk' => false, 'message' => 'The confirmation SMS could not be sent because of an internal error. Use "Resend SMS" to try again.'];
+        }
+
+        $smsOk = !in_array(false, array_column($results, 'ok'), true);
+
+        $summary = [];
+        foreach (['buyer' => 'Buyer', 'seller' => 'Seller'] as $key => $label) {
+            $r = $results[$key];
+            if ($r['ok'] && !empty($r['duplicate'])) {
+                $summary[] = "{$label}: same number as the buyer, so one SMS was sent.";
+            } elseif ($r['ok']) {
+                $summary[] = "{$label} SMS: sent" . (!empty($r['units']) ? " ({$r['units']} SMS units)" : '') . '.';
+            } else {
+                $summary[] = "{$label} SMS: not delivered ({$r['error']}).";
+            }
+        }
+        $summary[] = 'Internal push: ' . ($pushResult['ok'] ? 'sent.' : 'not delivered (' . $pushResult['error'] . ').');
+
+        return ['smsOk' => $smsOk, 'message' => implode(' ', $summary)];
+    }
+
+    /**
+     * Manual "Resend notification": a safety net for when the automatic send
+     * failed to reach someone (for example the SMS account ran out of
+     * credit). Only for deeds already marked Received, and rate-limited so a
+     * double-click or a curious user cannot burn SMS credit.
      */
     public function sendNotification(array $params): void
     {
@@ -251,55 +354,19 @@ final class DeedController extends Controller
             Response::notFound();
         }
         $registration = RegistrationDetail::find($id);
-
         if (empty($registration['received'])) {
-            $this->flashAndRedirect('error', 'Mark this deed received before notifying the buyer and seller.', '/deeds/' . $id);
-        }
-        if (!empty($registration['notification_sent'])) {
-            $this->flashAndRedirect('error', 'Notification already sent for this deed.', '/deeds/' . $id);
+            $this->flashAndRedirect('error', 'The confirmation SMS is only sent once a deed has been marked Received.', '/deeds/' . $id);
         }
 
-        $sms = new TextLkSmsNotificationService();
-        $smsResults = [];
-        foreach (['buyer' => $deed['buyer_mobile'], 'seller' => $deed['seller_mobile']] as $party => $mobile) {
-            $smsResults[$party] = $mobile
-                ? $sms->send($mobile, "Nithi Docket: Deed {$deed['deed_number']} has been registered.")
-                : ['ok' => false, 'error' => 'No mobile number on file.'];
-        }
-        AuditLogger::log('deed.sms_attempted', 'deed', $id, null, $smsResults);
-
-        $push = new FirebaseNotificationService();
-        $pushResult = $push->sendToTopic(
-            'deed-updates',
-            'Deed registered',
-            "Deed {$deed['deed_number']} has been successfully registered.",
-            ['deed_id' => (string) $id]
-        );
-        $notificationId = Notification::create([
-            'title' => 'Deed registered',
-            'message' => "Deed {$deed['deed_number']} has been successfully registered.",
-            'target_type' => 'topic',
-            'target_value' => 'deed-updates',
-            'related_deed_id' => $id,
-            'sent_by' => Auth::id(),
-        ]);
-        Notification::markResult($notificationId, $pushResult['ok'] ? 'sent' : 'failed', $pushResult['error'], $pushResult['recipientCount']);
-
-        RegistrationDetail::markNotificationSent($id);
-        AuditLogger::log('deed.notification_sent', 'deed', $id, null, ['push' => $pushResult, 'sms' => $smsResults]);
-
-        $smsSummary = [];
-        foreach (['buyer' => 'Buyer', 'seller' => 'Seller'] as $key => $label) {
-            $smsSummary[] = $smsResults[$key]['ok']
-                ? "{$label} SMS: sent."
-                : "{$label} SMS: not delivered ({$smsResults[$key]['error']}).";
+        $since = RegistrationDetail::secondsSinceNotification($id);
+        if ($since !== null && $since < self::RESEND_COOLDOWN_SECONDS) {
+            $wait = self::RESEND_COOLDOWN_SECONDS - $since;
+            $this->flashAndRedirect('error', "A notification was just sent. Please wait {$wait} seconds before resending.", '/deeds/' . $id);
         }
 
-        $summary = 'Marked as notified. '
-            . 'Internal push: ' . ($pushResult['ok'] ? 'sent.' : 'not delivered (' . $pushResult['error'] . ').') . ' '
-            . implode(' ', $smsSummary);
-
-        $this->flashAndRedirect('success', $summary, '/deeds/' . $id);
+        AuditLogger::log('deed.notification_resend', 'deed', $id);
+        $notify = $this->notifyReceived($deed);
+        $this->flashAndRedirect($notify['smsOk'] ? 'success' : 'error', 'Notification resent. ' . $notify['message'], '/deeds/' . $id);
     }
 
     public function archive(array $params): void

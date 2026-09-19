@@ -6,5 +6,6 @@
 /firebase/service-account.json
 /public/assets/js/firebase-config.js
 /public/firebase-messaging-sw.js
+*.log
 .DS_Store
 Thumbs.db

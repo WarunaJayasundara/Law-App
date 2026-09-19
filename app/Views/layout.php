@@ -11,6 +11,7 @@ $navItems = [
     ['path' => '/notifications', 'label' => 'Notifications', 'icon' => 'bi-bell', 'perm' => 'notifications.view'],
     ['path' => '/users', 'label' => 'Users', 'icon' => 'bi-people', 'perm' => 'users.manage'],
     ['path' => '/audit-logs', 'label' => 'Audit log', 'icon' => 'bi-shield-check', 'perm' => 'audit.view'],
+    ['path' => '/settings', 'label' => 'Settings', 'icon' => 'bi-gear', 'perm' => 'settings.manage'],
 ];
 $currentPath = App\Core\Request::path();
 ?>
@@ -48,10 +49,10 @@ $currentPath = App\Core\Request::path();
     </nav>
     <div class="nd-sidebar-foot">
       <?php if ($user = Auth::user()): ?>
-        <div class="who">
+        <a class="who" href="<?= Response::url('account') ?>" title="My account and password">
           <span class="nd-avatar"><?= View::e(mb_strtoupper(mb_substr($user['name'], 0, 1))) ?></span>
           <span><?= View::e($user['name']) ?><small class="d-block text-capitalize"><?= View::e($user['role_name']) ?></small></span>
-        </div>
+        </a>
         <form method="post" action="<?= Response::url('logout') ?>">
           <?= \App\Core\Csrf::field() ?>
           <button type="submit" class="nd-logout-btn"><i class="bi bi-box-arrow-right"></i> Log out</button>

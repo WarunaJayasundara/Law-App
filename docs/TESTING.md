@@ -46,9 +46,10 @@ direct HTTP requests, not just code review:
   exchange + FCM accept), topic subscription confirmed via a real
   Instance ID API call, and real SMS confirmed via a real text.lk request
   to a real Sri Lankan mobile number (`ok: true` from their API). The
-  full "Notify buyer and seller" button was exercised end-to-end through
-  the actual UI and returned "Internal push: sent. Buyer SMS: sent.
-  Seller SMS: sent."
+  manual "Notify buyer and seller" button of that time was exercised
+  end-to-end through the actual UI ("Internal push: sent. Buyer SMS: sent.
+  Seller SMS: sent."). It has since been replaced by the automatic
+  one-time SMS on Received; see the section below for the current flow.
 - **Users**: admin creates a `staff` account through the real form.
 - **RBAC**: logged in as a real `staff` account — nav correctly hides
   Users/Audit log/Archive; *direct HTTP requests* (bypassing the UI
@@ -133,6 +134,109 @@ Full deed lifecycle (create → review → receive → notify, with real
 Firebase push + real text.lk SMS) was re-run end-to-end after these
 changes to confirm nothing broke — same "Internal push: sent. Buyer SMS:
 sent. Seller SMS: sent." result as before.
+
+## Editable one-time SMS, security hardening and Apache verification
+
+The confirmation SMS is sent **once, when a deed is marked Received** (an
+earlier iteration sent at every stage; that was removed). The wording is an
+admin-editable template (Settings), and only `{deed_number}` varies.
+
+### Automated (PHPUnit, 38 tests)
+
+`SmsTemplateTest` (validation, rendering, GSM-7 and Unicode part counting,
+including text.lk's own figures: 72 Sinhala characters = 2 parts, the default
+335-character message = 5), `PasswordPolicyTest`, `TextLkPhoneFormatTest`
+(local/international/spaced numbers accepted; landlines and junk rejected),
+plus new `Validator` cases (deed-number characters, byte length).
+
+### Real SMS (text.lk, sender `YUSORA`, to the developer's own number)
+
+- A bilingual Sinhala + English probe showed text.lk accepts Sinhala through
+  the normal `plain` type and bills it as Unicode. A 72-character Sinhala
+  message returned `"status":"success"`, `sms_count: 2`. The full default
+  message was refused with HTTP 403 "not enough balance ... 4 of the 5", which
+  is how the 5-unit cost was confirmed.
+- End to end through the app with a short custom message: create deed, mark
+  reviewed (0 SMS sent), mark received: "Buyer SMS: sent (1 SMS units). Seller:
+  same number as the buyer, so one SMS was sent."
+- With the default message and too little credit: "Marked received ... Buyer
+  SMS: not delivered (There is not enough balance ...)" in red, status still
+  Received, and an immediate resend is refused for 60 seconds.
+- A deed with no phone numbers reports "No mobile number on file" for both.
+
+### Security tests run against the live app
+
+- Unauthenticated requests to every page redirect to login; `.env`, the
+  Firebase key, source, SQL and logs are not served.
+- POST without a CSRF token: 419.
+- Staff account: 403 on `/settings`, `/users`, `/audit-logs` and on POSTs to
+  them (checked with direct requests, not just hidden links); the SMS template
+  was unchanged after a staff attempt.
+- Settings validation: no placeholder, unknown placeholder, and over-length
+  templates rejected with nothing saved.
+- Password change: wrong current, mismatch, same as current, published
+  default, too short, equal to username: all refused; a valid change works,
+  the old password stops working, and it is audit-logged.
+- Lockout: locks on exactly the 5th wrong password, correct password refused
+  while locked; logout ends the session; session ID rotates on login.
+- Per-IP throttle: after 20 failures from one address the 21st attempt is
+  refused even with the correct password; another address is unaffected.
+- Behind a proxy (`TRUST_PROXY=true`): the rightmost `X-Forwarded-For` entry is
+  recorded (a client-supplied `6.6.6.6` is ignored); HSTS and the `Secure`
+  cookie appear only when the proxy says HTTPS.
+- Production mode: signing in with the published default password redirects
+  every page to My account until it is changed.
+- Input: a URL as deed number rejected; `<script>` and `onerror` payloads in a
+  name are escaped on every page; SQL-injection probes on search and suggest
+  return normal empty results; editing a deed number to an existing one now
+  gives a message (it was a 500).
+- Security headers and a CSP are present, and the browser console showed no CSP
+  violations on the deed, settings and dashboard pages.
+
+### Real Apache (XAMPP, project folder as web root, PHP 8.0.11)
+
+All 20 private paths (`.env`, `firebase/service-account.json`, `app/`,
+`database/`, `storage/logs/`, `.git/`, `vendor/`, `composer.json`,
+`.htaccess`, ...) return 403; four path-traversal variants fail; CSS, JS and
+the service worker are served with correct types; deep routes work; login and
+every page work.
+
+### Bugs found and fixed in this pass
+
+1. A blank line before `<?php` in `NotificationServiceInterface.php` emitted
+   output early and could break redirects (headers already sent).
+2. Editing a deed number to an existing one crashed with a database error.
+3. The audit log recorded the raw form, including the session CSRF token.
+4. The Apache instructions claimed no rewrite rules were needed; on Apache
+   every URL but `/` would have been a 404.
+5. No `.htaccess` existed, so on shared hosting `.env` and the Firebase private
+   key would have been downloadable.
+6. Account lockout compared MySQL and PHP clocks; on a UTC MySQL host it would
+   silently never lock. The DB session timezone is now aligned with the app.
+7. Buyer/seller phone numbers could not be seen or corrected after entry, so a
+   typo would misdirect the SMS. They are now editable on the deed page, and an
+   empty number no longer erases an existing one.
+8. Auto-generated placeholder NICs (`nic_...`) were shown as real NICs.
+9. No way to change the published default admin password inside the app.
+10. Two of my own edits introduced errors that lint or a test caught before
+    they shipped (an unescaped SQL quote in a PHP string, an undefined
+    variable).
+
+## Live search suggestions + more UI polish
+
+The deed registry's search box now suggests matches as you type (debounced
+220ms, `GET /deeds/suggest?q=...` — same fields as the full search: deed
+no., NIC, buyer/seller name — capped at 8 results), with arrow-key
+navigation, Enter to open, and click-outside/Escape to dismiss. Clicking a
+suggestion jumps straight to that deed's detail page. Live-verified:
+typing "Wa" surfaced the 3 matching "Waruna Jayasundara" deeds, refining
+to "Waruna J" (including the space) kept the same live-narrowed set,
+clicking a result navigated straight to `/deeds/1234`.
+
+Also: the Filter/Clear buttons now match the app's premium button
+treatment (gradient primary + outlined secondary, both with icons), and
+result cards get a very low-opacity (2.8%) brand-icon watermark in the
+bottom-right corner so long/empty card space doesn't read as a dead gap.
 
 ## Not yet covered
 

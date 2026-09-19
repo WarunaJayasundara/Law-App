@@ -5,11 +5,13 @@ declare(strict_types=1);
 use App\Core\Auth;
 use App\Core\Response;
 use App\Core\Router;
+use App\Core\SecurityHeaders;
 use App\Core\Session;
 use App\Middleware\AuthMiddleware;
 
 require dirname(__DIR__) . '/bootstrap.php';
 
+SecurityHeaders::send();
 Session::start();
 
 $router = new Router();
@@ -29,6 +31,7 @@ $router->get('/dashboard', [App\Controllers\DashboardController::class, 'index']
 
 $router->get('/deeds', [App\Controllers\DeedController::class, 'index'], $auth);
 $router->get('/deeds/create', [App\Controllers\DeedController::class, 'showCreateForm'], $auth);
+$router->get('/deeds/suggest', [App\Controllers\DeedController::class, 'suggest'], $auth);
 $router->post('/deeds', [App\Controllers\DeedController::class, 'store'], $auth);
 $router->get('/deeds/{id}', [App\Controllers\DeedController::class, 'show'], $auth);
 $router->post('/deeds/{id}/details', [App\Controllers\DeedController::class, 'updateDetails'], $auth);
@@ -48,5 +51,11 @@ $router->post('/users', [App\Controllers\UserController::class, 'store'], $auth)
 $router->post('/users/{id}', [App\Controllers\UserController::class, 'update'], $auth);
 
 $router->get('/audit-logs', [App\Controllers\AuditLogController::class, 'index'], $auth);
+
+$router->get('/settings', [App\Controllers\SettingsController::class, 'index'], $auth);
+$router->post('/settings', [App\Controllers\SettingsController::class, 'update'], $auth);
+
+$router->get('/account', [App\Controllers\AccountController::class, 'show'], $auth);
+$router->post('/account/password', [App\Controllers\AccountController::class, 'changePassword'], $auth);
 
 $router->dispatch();

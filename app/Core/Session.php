@@ -11,14 +11,12 @@ final class Session
         }
 
         $lifetime = (int) Env::get('SESSION_LIFETIME_MINUTES', 120) * 60;
-        $isHttps = (($_SERVER['HTTPS'] ?? '') === 'on') || (($_SERVER['SERVER_PORT'] ?? '') === '443');
-
         session_name(Env::get('SESSION_NAME', 'nithi_docket_session'));
         session_set_cookie_params([
             'lifetime' => $lifetime,
             'path' => '/',
             'domain' => '',
-            'secure' => $isHttps,
+            'secure' => Request::isHttps(),
             'httponly' => true,
             'samesite' => 'Lax',
         ]);

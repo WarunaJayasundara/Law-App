@@ -5,20 +5,25 @@ use App\Core\View;
 use App\Models\Deed;
 $rows = $result['rows'];
 ?>
-<div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="font-head fs-2 mb-1">Deed registry</h1>
-    <p class="text-muted mb-0">Buyer and seller records tracked through to registration.</p>
+<div class="nd-page-head">
+  <span class="nd-page-head-icon"><i class="bi bi-journal-text"></i></span>
+  <div class="nd-page-head-text">
+    <h1 class="font-head">Deed registry</h1>
+    <p>Buyer and seller records tracked through to registration.</p>
   </div>
   <?php if (Auth::can('deeds.create')): ?>
-    <a href="<?= Response::url('deeds/create') ?>" class="btn btn-nd-primary">+ Enter deed</a>
+    <a href="<?= Response::url('deeds/create') ?>" class="btn btn-nd-primary nd-page-head-action"><i class="bi bi-plus-lg me-1"></i>Enter deed</a>
   <?php endif; ?>
 </div>
 
-<form method="get" action="<?= Response::url('deeds') ?>" class="card p-3 mb-3">
+<form method="get" action="<?= Response::url('deeds') ?>" class="card nd-filter-card p-3 mb-3" autocomplete="off">
   <div class="row g-2">
     <div class="col-md-4">
-      <input type="text" name="q" value="<?= View::e($filters['q']) ?>" class="form-control" placeholder="Search deed no., NIC / ID, or name">
+      <div class="nd-search-wrap">
+        <i class="bi bi-search nd-search-icon"></i>
+        <input type="text" name="q" id="deedSearchInput" data-base-url="<?= Response::url('deeds') ?>" value="<?= View::e($filters['q']) ?>" class="form-control" placeholder="Search deed no., NIC / ID, or name" autocomplete="off">
+        <div class="nd-search-suggest" id="deedSearchSuggest" hidden></div>
+      </div>
     </div>
     <div class="col-md-2">
       <select name="category" class="form-select">
@@ -44,12 +49,12 @@ $rows = $result['rows'];
     </div>
   </div>
   <div class="mt-2">
-    <button type="submit" class="btn btn-outline-secondary btn-sm">Filter</button>
-    <a href="<?= Response::url('deeds') ?>" class="btn btn-link btn-sm">Clear</a>
+    <button type="submit" class="btn btn-nd-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
+    <a href="<?= Response::url('deeds') ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg me-1"></i>Clear</a>
   </div>
 </form>
 
-<div class="card p-3">
+<div class="card p-3 nd-card-watermark">
   <?php if (empty($rows)): ?>
     <div class="nd-empty">
       <i class="bi <?= $result['total'] === 0 && $filters['q'] === '' ? 'bi-journal-text' : 'bi-search' ?> nd-empty-icon"></i>
@@ -91,3 +96,4 @@ $rows = $result['rows'];
     <?php endif; ?>
   <?php endif; ?>
 </div>
+<script src="<?= Response::url('assets/js/search-suggest.js') ?>"></script>

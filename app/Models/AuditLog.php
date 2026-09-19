@@ -24,6 +24,17 @@ final class AuditLog
         ]);
     }
 
+    /** Failed sign-ins recorded from one IP address in the last N minutes (any username). */
+    public static function countRecentFailuresFromIp(string $ip, int $minutes): int
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM audit_logs
+             WHERE action = :action AND ip_address = :ip AND created_at > DATE_SUB(NOW(), INTERVAL ' . (int) $minutes . ' MINUTE)'
+        );
+        $stmt->execute(['action' => 'login.failed', 'ip' => $ip]);
+        return (int) $stmt->fetchColumn();
+    }
+
     public static function recent(int $limit = 200, array $filters = []): array
     {
         $where = [];

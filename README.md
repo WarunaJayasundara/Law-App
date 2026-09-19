@@ -36,15 +36,18 @@ and why.
    cp .env.example .env
    ```
    Edit `.env`: set `APP_URL` to wherever this will be served from (e.g.
-   `http://localhost/nithi-docket/public` under XAMPP's htdocs, or
    `http://localhost:8090` if using PHP's built-in server — see below),
-   and set `SEED_ADMIN_PASSWORD` to something real before the next step.
+   set `APP_ENV=local` and `APP_DEBUG=true` for local development
+   (the example file defaults to production-safe values), and set
+   `SEED_ADMIN_PASSWORD` to something real before the next step.
 3. **Seed the first admin account**
    ```bash
    php database/seed_admin.php
    ```
    Log in with `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD` from `.env`,
-   then rotate the password from the Users page immediately.
+   then change the password from **My account** (bottom of the sidebar).
+   Already have a database from before the Settings page existed? Run
+   `database/migrations/2026_09_19_settings.sql` once.
 4. **Serve it**
    - Under XAMPP: place/symlink this folder under `htdocs`, point Apache's
      document root (or an alias) at `public/`, and set `APP_URL`
@@ -55,12 +58,17 @@ and why.
      ```
 ## Notifications
 
-**Firebase Cloud Messaging** (internal staff/admin alerts, via the
-Notifications page and the per-deed "Notify" button's internal push) is
-connected to a real project — see [firebase/SETUP.md](firebase/SETUP.md).
+**SMS to the buyer and seller** is sent automatically, once, when a deed is
+marked **Received**, to the mobile numbers on the deed. The message is the
+office's two-language confirmation and an **admin can change the wording**
+under Settings (only `{deed_number}` varies per deed). It uses
+[text.lk](https://text.lk) — see [docs/SMS_SETUP.md](docs/SMS_SETUP.md),
+including how billing works (a Sinhala message costs several SMS units).
 
-**SMS to buyer/seller mobile numbers** (via the per-deed "Notify" button)
-uses [text.lk](https://text.lk) — see [docs/SMS_SETUP.md](docs/SMS_SETUP.md).
+**Firebase Cloud Messaging** sends an internal push to staff when a deed is
+received, and powers the Notifications page — see
+[firebase/SETUP.md](firebase/SETUP.md).
+
 These are two separate systems for two different audiences: Firebase can't
 reach a phone number, and text.lk doesn't know about app accounts.
 
@@ -103,7 +111,10 @@ needed.
 | Submitted → Reviewed → Received workflow (explicit action buttons) | Implemented |
 | Audit log | Implemented |
 | Firebase push notifications (internal staff/admin) | Implemented and connected to a real project (see `firebase/SETUP.md`) |
-| SMS to buyer/seller (text.lk) | Implemented and verified with a real send, using a real approved Sender ID (`YUSORA`) — see `docs/SMS_SETUP.md` |
+| SMS to buyer/seller (text.lk) | Implemented and verified with real sends, using a real approved Sender ID (`YUSORA`). Sent once, on Received. Needs SMS credit — see `docs/SMS_SETUP.md` |
+| Admin-editable SMS wording (Settings page) | Implemented, with live preview and per-recipient SMS-part estimate |
+| Change your own password (My account) | Implemented; forced on first login in production if the published default is used |
+| Login throttling, security headers/CSP, hardened `.htaccess` | Implemented — see `docs/SECURITY.md` |
 | Self-registration | Intentionally not built — accounts are created by an admin under Users, since this handles legal/personal records |
 
 ## Status model
@@ -112,9 +123,9 @@ Deliberately simple: **Submitted → Reviewed → Received**, moved forward by
 explicit "Mark reviewed" / "Mark received" staff actions on the deed page
 (not inferred from whether some field happens to be filled in). Register
 date, day book no., and new folio no. are plain reference fields you can
-fill in whenever — they don't drive the status. Notifying the buyer and
-seller is available once a deed is Received, but is a courtesy action, not
-a 4th status.
+fill in whenever — they don't drive the status. The confirmation SMS goes
+out automatically when a deed becomes Received; it is a side effect of that
+step, not a 4th status. "Resend SMS" is a safety net for a failed send.
 
 Document upload was deliberately not built — the registration workflow
 here doesn't require attaching files.

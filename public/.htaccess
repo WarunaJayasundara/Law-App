@@ -1,0 +1,32 @@
+Options -Indexes -MultiViews
+
+# Never serve dotfiles (.htaccess, .env, ...), whichever way the URL got here.
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# A rewrite ruleset in a subfolder replaces the parent's, so repeat the
+# dotfile block here for requests that reach /public/... directly.
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+# Real files (CSS, JS, service worker) are served directly; every other URL
+# goes to the front controller.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "DENY"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

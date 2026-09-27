@@ -238,6 +238,33 @@ treatment (gradient primary + outlined secondary, both with icons), and
 result cards get a very low-opacity (2.8%) brand-icon watermark in the
 bottom-right corner so long/empty card space doesn't read as a dead gap.
 
+## Final smoothing pass
+
+A full click-through of every page and form as both admin and staff, plus every
+edge case (missing fields, bad NIC, duplicate deed number, workflow order,
+double actions, RBAC on every admin-only route, own-password change, manual
+notification broadcast). All correct.
+
+**One real bug found and fixed**: the search-suggestions dropdown swallowed a
+click on the "No matches" line (or empty padding below the last result)
+instead of closing — since it visually sits over whatever is below it (the
+category filter, on this narrow layout), that field became permanently
+unreachable until the user clicked fully outside the whole filter card or
+pressed Escape. Fixed in `search-suggest.js`: a click inside the box that
+isn't on a real suggestion now closes it, same as a click outside would.
+Verified: clicking through the box now closes it and the field underneath
+works on the next click; clicking a real suggestion still navigates correctly.
+
+**Found, not a bug in this app**: the current `TEXTLK_API_TOKEN` is being
+rejected by text.lk itself with `HTTP 401 "User not found for the API token
+or unauthenticated request."` — confirmed with a direct request outside the
+app, so this is the token, not the code. It previously failed with "not
+enough balance", meaning it worked at that time; the token now appears to
+have been revoked or rotated on text.lk's side without `.env` being updated.
+The app already reports this failure honestly (red flash message, audit
+log) rather than hiding it — but no SMS will send until a valid token is put
+in `.env`.
+
 ## Not yet covered
 
 - No automated feature/integration tests against a real DB (would need a

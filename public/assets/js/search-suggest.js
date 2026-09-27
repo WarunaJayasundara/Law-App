@@ -81,8 +81,15 @@
 
   box.addEventListener('click', function (e) {
     var item = e.target.closest('.nd-suggest-item');
-    if (!item) return;
-    window.location.href = input.dataset.baseUrl + '/' + item.dataset.id;
+    if (item) {
+      window.location.href = input.dataset.baseUrl + '/' + item.dataset.id;
+      return;
+    }
+    // A click on the box itself but not on a real suggestion (e.g. the
+    // "No matches" line, or empty padding below the last item) — the box
+    // sits over whatever the page has below it, so without this it could
+    // silently swallow a click meant for a filter field underneath.
+    close();
   });
 
   document.addEventListener('click', function (e) {

@@ -238,6 +238,25 @@ treatment (gradient primary + outlined secondary, both with icons), and
 result cards get a very low-opacity (2.8%) brand-icon watermark in the
 bottom-right corner so long/empty card space doesn't read as a dead gap.
 
+## Mock data for search/filter testing
+
+`database/seed_mock_deeds.php` inserts 12 sample deeds (`MOCK-*` deed
+numbers) — 2 per category × all 6 categories, spread across all 3
+statuses (4 Submitted, 4 Reviewed, 4 Received) — so search and filter can
+be exercised against every category/status combination without touching
+real records. Idempotent (re-running skips deed numbers that already
+exist). It bypasses the controller's Received flow on purpose, calling
+`RegistrationDetail::markReviewed()`/`markReceived()` directly, so **no
+confirmation SMS is sent** for this data; the fake buyer/seller mobile
+numbers (`078000000X`) are also non-routable, so a manual "Resend SMS"
+against one of these can't reach a real phone either way.
+
+Verified: every category (2 deeds each) and every status (4 deeds each)
+correctly returned by the filter form; search by buyer name and by NIC
+both find the right deed; a combined category+status filter narrows to
+exactly the one matching deed; the live suggest-as-you-type box also
+surfaces mock deeds.
+
 ## Final smoothing pass
 
 A full click-through of every page and form as both admin and staff, plus every

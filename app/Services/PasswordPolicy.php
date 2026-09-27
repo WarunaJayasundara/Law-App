@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 /** Password rules shared by "create user" and "change my password". Pure logic. */

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<ruleset name="NithiDocket">
+    <description>PSR-12 coding standard for Nithi Docket's application code.</description>
+
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+    <arg value="p"/>
+
+    <file>app</file>
+    <file>database</file>
+    <file>public/index.php</file>
+    <file>bootstrap.php</file>
+    <file>tests</file>
+
+    <!-- Views mix HTML and PHP by design (templates) — PSR-12's statement/
+         formatting rules don't apply well to that, so they're excluded. -->
+    <exclude-pattern>app/Views/*</exclude-pattern>
+
+    <rule ref="PSR12"/>
+
+    <!-- This project deliberately doesn't wrap long SQL strings or long
+         descriptive error/flash messages just to hit 120 columns. -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="150"/>
+            <property name="absoluteLineLimit" value="0"/>
+        </properties>
+    </rule>
+</ruleset>

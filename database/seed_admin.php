@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * One-time CLI script: creates the default admin account from the
  * SEED_ADMIN_* values in .env. Safe to re-run — does nothing if a user
@@ -9,6 +7,8 @@ declare(strict_types=1);
  *   php database/seed_admin.php
  * Rotate/change the password immediately after first login in production.
  */
+
+declare(strict_types=1);
 
 require __DIR__ . '/../bootstrap.php';
 

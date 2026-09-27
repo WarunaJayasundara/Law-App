@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * One-off CLI script: inserts sample deeds spanning every category and
  * every status, so search/filter can be exercised realistically. Safe to
@@ -16,6 +14,8 @@ declare(strict_types=1);
  *
  *   php database/seed_mock_deeds.php
  */
+
+declare(strict_types=1);
 
 require __DIR__ . '/../bootstrap.php';
 

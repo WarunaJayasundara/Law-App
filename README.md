@@ -76,11 +76,23 @@ Every notification/SMS attempt is recorded honestly with a real error
 message if it fails — nothing pretends to have sent something that wasn't
 actually sent.
 
+## Coding standard
+
+Every class-bearing PHP file has `declare(strict_types=1)`. Style is
+[PSR-12](https://www.php-fig.org/psr/psr-12/), enforced by PHP_CodeSniffer
+(`phpcs.xml` — Views are excluded, since they're HTML/PHP templates, not
+PSR-12-shaped code):
+
+```bash
+composer install         # once — installs phpunit + phpcs as dev deps
+composer cs               # check style (also: vendor/bin/phpcs)
+composer cs-fix           # auto-fix what can be auto-fixed
+```
+
 ## Testing
 
 ```bash
-composer require --dev phpunit/phpunit:^9.6   # once, PHP 8.0-compatible
-php vendor/bin/phpunit
+composer test             # also: vendor/bin/phpunit
 ```
 
 Unit tests cover pure logic that doesn't need a database (the registration

@@ -238,6 +238,31 @@ treatment (gradient primary + outlined secondary, both with icons), and
 result cards get a very low-opacity (2.8%) brand-icon watermark in the
 bottom-right corner so long/empty card space doesn't read as a dead gap.
 
+## Coding-standard pass
+
+`declare(strict_types=1)` added to all 40 class-bearing PHP files under
+`app/` (Views excluded — they're templates, not logic). This is a real
+behavior change, not just a style one: with strict types on, passing the
+wrong scalar type (e.g. a string where an `int` param is declared) now
+throws a `TypeError` immediately instead of PHP silently coercing it —
+verified this didn't break anything by re-running the full functional
+smoke test (every page, create/review/receive/registration/archive,
+settings save+reset, user create/update, account password change, manual
+notification broadcast, search/suggest) with strict types on; all still
+pass.
+
+Added PHP_CodeSniffer (`squizlabs/php_codesniffer`) with a PSR-12 ruleset
+(`phpcs.xml`, `composer cs` / `composer cs-fix`) — the codebase was
+already almost entirely PSR-12-compliant; the only 2 real errors were the
+file-docblock-before-`declare()` ordering in the two `database/seed_*.php`
+scripts (fixed), plus line-length warnings on a few docblocks and the
+mock-deed data table (left as warnings — the ruleset's own 150-column
+limit already documents that data-dense lines aren't wrapped just to fit).
+Also bumped `phpunit/phpunit` to `^9.6.33` (was pinned to bare `9.6`,
+i.e. `9.6.0`) to pick up a fix for a real, if low-relevance-here, high
+severity CVE (`CVE-2026-24765`, unsafe deserialization in PHPT code
+coverage handling) that `composer audit` flagged.
+
 ## Mock data for search/filter testing
 
 `database/seed_mock_deeds.php` inserts 12 sample deeds (`MOCK-*` deed
